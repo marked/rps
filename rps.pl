@@ -43,7 +43,7 @@ foreach my $l (@lines) {
         if (! defined ($procs_children[$tppid]) ) { # missing child array
           $procs_children[$tppid] = [];
         }
-        push($procs_children[$tppid], $tpid); 
+        push(@{$procs_children[$tppid]}, $tpid); 
       } 
     } else { dump_input() ; die "Expecting line $line_num ($int_line) /^[0-9]+ / Found $l\n"; };
   }
