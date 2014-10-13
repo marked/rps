@@ -1,32 +1,33 @@
 #!/usr/bin/perl
 use warnings;
 use strict;
+my $DEBUG = 0;
 
-my @lines;
-if (scalar @ARGV > 0) {
-  my $HOST = shift (@ARGV);
-  my $PORT = 25007;
-  if (scalar @ARGV > 0) {
+my (@lines, $HOST, $PORT);
+if (@ARGV) {
+  $HOST = shift (@ARGV);
+  $PORT = 25007;
+  if (@ARGV) {
     $PORT = shift (@ARGV);
   } 
   @lines = `echo "GRAB" | nc $HOST $PORT`;
 } else {
+  print STDERR "Reading from STDIN\n";
   @lines = <>;
 }
-  
+my @orig_input = @lines;  # backup input for debugging
+chop @lines;
 
 my $total_proc = 0;
-my @procs;  # array of hash refs
-my @procs_children;  # array of array refs
+my @procs;  # array of hash refs of parsed details
+my @procs_children;  # array of array refs containing pids of children
 
 my $line_num = 0;
 my $cur_proc_num = 0;
-my $spacer;
 my $tmp_hash;
 foreach my $l (@lines) {
-  chomp $l;
-  if ($line_num % 9 == 0) { # new proc
-    if ($l =~ "GRAB") {
+  if ($line_num % 9 == 0) {  # new proc frame
+    if ($l =~ "^GRAB") {     # or notice of end
       last;
     }
     $total_proc++;
@@ -38,7 +39,7 @@ foreach my $l (@lines) {
   $tmp_hash->{$int_line} = denull($l);
   
   # Parse some line formats
-  if ($int_line == 2) {
+  if ($int_line == 2) { # 1103 (tivoApplication) S 702 1103 702 0 -1 4202816 29656 27015 2...
     if ($l =~ /^[0-9]+ /) {
       my ($tpid, $tname, $tcode, $tppid, $tjunk) = split ( / /, $l );
       ($cur_proc_num) = ($tpid);
@@ -52,7 +53,7 @@ foreach my $l (@lines) {
       } 
     } else { dump_input() ; die "Expecting line $line_num ($int_line) /^[0-9]+ / Found $l\n"; };
   }
-  if ($int_line == 7) {
+  if ($int_line == 7) { # SystemServices^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@E      949
     if ($l =~ /E/) {
       my($tname7, $junk2) = split ( /E/, $l );
       $tmp_hash->{'name7'} = denull($tname7);
@@ -61,10 +62,14 @@ foreach my $l (@lines) {
   $line_num++;
 }
 
-# OUTPUT
+if ($DEBUG) {
+  dump_input();
+}
+
+### OUTPUT ###
 
 # Linear
-if (0) {
+if ($DEBUG) {
   foreach my $p (@procs) {
     if (defined $p) {
       print "--\n";
@@ -80,7 +85,7 @@ r_pretty_dump(1, 0);
 
 print "Total: $total_proc\n";
 
-# SUBS
+### SUBS ###
 
 sub r_pretty_dump{
   my $pid  = shift(@_);
@@ -98,8 +103,10 @@ sub pretty_dump_proc {
   my $p = shift(@_);
   if (defined $p) {
     print "$p->{'pid'} $p->{'name2'} $p->{'name7'}\n";
-    foreach my $c (@{$procs_children[$p->{'pid'}]}) {
-      #print "child : $c\n";
+    if ($DEBUG) {
+      foreach my $c (@{$procs_children[$p->{'pid'}]}) {
+        print "child : $c\n";
+      }
     }
   }
 }
@@ -128,6 +135,6 @@ sub dump_proc {
 
 sub dump_input {
   open (FD, ">procdump.txt");
-  print FD join("\n", @lines);
+  print FD @orig_input;
   close FD;
 }
