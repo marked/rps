@@ -3,7 +3,12 @@ use warnings;
 use strict;
 
 my $HOST = shift (@ARGV);
-my @lines = `echo "GRAB" | nc $HOST 25007`;
+my $PORT = 25007;
+if (@ARGV) {
+  $PORT = shift (@ARGV);
+} 
+  
+my @lines = `echo "GRAB" | nc $HOST $PORT`;
 
 my $total_proc = 0;
 my @procs;  # array of hash refs
