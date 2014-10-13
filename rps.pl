@@ -2,13 +2,18 @@
 use warnings;
 use strict;
 
-my $HOST = shift (@ARGV);
-my $PORT = 25007;
-if (@ARGV) {
-  $PORT = shift (@ARGV);
-} 
+my @lines;
+if (scalar @ARGV > 0) {
+  my $HOST = shift (@ARGV);
+  my $PORT = 25007;
+  if (scalar @ARGV > 0) {
+    $PORT = shift (@ARGV);
+  } 
+  @lines = `echo "GRAB" | nc $HOST $PORT`;
+} else {
+  @lines = <>;
+}
   
-my @lines = `echo "GRAB" | nc $HOST $PORT`;
 
 my $total_proc = 0;
 my @procs;  # array of hash refs
