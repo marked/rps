@@ -31,7 +31,7 @@ foreach my $l (@lines) {
       last;
     }
     $total_proc++;
-    $tmp_hash = {};
+    $tmp_hash = { 'printed' => 0 };
   }
   my $int_line = $line_num % 9;
   
@@ -41,7 +41,9 @@ foreach my $l (@lines) {
   # Parse some line formats
   if ($int_line == 2) { # 1103 (tivoApplication) S 702 1103 702 0 -1 4202816 29656 27015 2...
     if ($l =~ /^[0-9]+ /) {
-      my ($tpid, $tname, $tcode, $tppid, $tjunk) = split ( / /, $l );
+      #print "$l\n";
+      $l =~ m/^([0-9]+) ([(].*[)]) (.) ([0-9]+)/;
+      my ($tpid, $tname, $tcode, $tppid) = ($1, $2, $3, $4);
       ($cur_proc_num) = ($tpid);
       ($tmp_hash->{'pid'}, $tmp_hash->{'ppid'}, $tmp_hash->{'name2'}) = ($tpid, $tppid, $tname);
       $procs[$tpid] = $tmp_hash; 
@@ -81,7 +83,12 @@ if ($DEBUG) {
 } 
 
 # Recursive
-r_pretty_dump(1, 0);
+
+foreach my $p (@procs) {
+  if (defined $p && $p->{'printed'} == 0 ) {
+    r_pretty_dump($p->{'pid'}, 0);
+  }
+}
 
 print "Total: $total_proc\n";
 
@@ -94,6 +101,7 @@ sub r_pretty_dump{
     print '  ';
   }
   pretty_dump_proc($procs[$pid]);
+  $procs[$pid]->{'printed'} = 1;
   foreach my $c (@{$procs_children[$pid]}) {
     r_pretty_dump( $c, $depth+1 );
   }
