@@ -3,18 +3,39 @@ use warnings;
 use strict;
 my $DEBUG = 0;
 
+### ARG's ###
+
+if (@ARGV==0) {
+  print STDERR " Usage: rps.pl HOST_IP
+ Usage: rps.pl HOST_IP PORT_IP
+ Usage: rps.pl -
+ Usage: rps.pl - FILENAME\n";
+ exit(-1);
+}
+
 my (@lines, $HOST, $PORT);
-if (@ARGV) {
-  $HOST = shift (@ARGV);
+my $arg = shift (@ARGV);
+
+if ($arg =~ /^-/) {
+  if (@ARGV) {
+    print STDERR "Reading from files\n";
+  }
+  else {
+    print STDERR "Reading from STDIN\n";
+  }
+  @lines = <>;
+}
+else {
+  $HOST = $arg;
   $PORT = 25007;
   if (@ARGV) {
     $PORT = shift (@ARGV);
   } 
   @lines = `echo "GRAB" | nc $HOST $PORT`;
-} else {
-  print STDERR "Reading from STDIN\n";
-  @lines = <>;
 }
+
+### PARSE ###
+
 my @orig_input = @lines;  # backup input for debugging
 chop @lines;
 
@@ -39,7 +60,7 @@ foreach my $l (@lines) {
   $tmp_hash->{$int_line} = denull($l);
   
   # Parse some line formats
-  if ($int_line == 2) { # 1103 (tivoApplication) S 702 1103 702 0 -1 4202816 29656 27015 2...
+  if ($int_line == 2) { # 1102 (tivoApplication) S 702 1102 702 0 -1 4202816 29656 27015 2...
     if ($l =~ /^[0-9]+ /) {
       #print "$l\n";
       $l =~ m/^([0-9]+) ([(].*[)]) (.) ([0-9]+)/;
@@ -77,13 +98,12 @@ if ($DEBUG) {
       print "--\n";
       dump_proc($p);
       print "\n";
-      pretty_dump_proc($p);
+      #pretty_dump_proc($p);
     }
   }
 } 
 
 # Recursive
-
 foreach my $p (@procs) {
   if (defined $p && $p->{'printed'} == 0 ) {
     r_pretty_dump($p->{'pid'}, 0);
